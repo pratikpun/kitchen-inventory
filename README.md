@@ -40,14 +40,17 @@ A full-stack app that:
 
 - **Backend:** Python, FastAPI, SQLAlchemy, Pydantic
 - **Database:** PostgreSQL
-- **Testing:** pytest
-- **Containerisation:** Docker 
+- **Testing:** pytest, httpx
+- **Linting:** Ruff + pre-commit hooks
+- **Containerisation:** Docker, Docker Compose
+- **CI/CD:** GitHub Actions (lint + test on every push)
+- **Cloud:** AWS (ECR, ECS Fargate, RDS)
 
 ## Running locally
 
 ```bash
 cd backend
-python -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app:app --reload
@@ -55,13 +58,52 @@ uvicorn app:app --reload
 
 Requires a local PostgreSQL instance with a `kitchen_inventory` database.
 
+## Running with Docker
+
+```bash
+cd backend
+docker compose up --build
+```
+
+This starts both the API and a PostgreSQL container. Requires a `.env` file (see `.env.example`).
+
+## Running tests
+
+```bash
+cd backend
+source venv/bin/activate
+pytest tests/ -v
+```
+
+Requires a local `kitchen_inventory_test` database.
+
+## AWS deployment
+
+The backend has been deployed to AWS using:
+- **ECR** for Docker image storage
+- **ECS Fargate** for running the container (serverless, no servers to manage)
+- **RDS** for managed PostgreSQL
+
+Key commands for redeployment:
+
+```bash
+# Build for AWS (must target amd64, not ARM)
+docker build --platform linux/amd64 -t kitchen-inventory .
+
+# Tag and push to ECR
+docker tag kitchen-inventory:latest <account-id>.dkr.ecr.eu-west-2.amazonaws.com/kitchen-inventory:latest
+docker push <account-id>.dkr.ecr.eu-west-2.amazonaws.com/kitchen-inventory:latest
+
+# Force ECS to pick up the new image
+aws ecs update-service --cluster kitchen-inventory --service kitchen-inventory-service --force-new-deployment --region eu-west-2
+```
+
 ## What's next
 
 - Recipe and recipe-ingredient models
 - Recipe matching engine (what can I cook with what I have?)
 - Inventory deduction on cook events
 - Frontend (likely React or Next.js)
-- Dockerise everything and deploy
 
 ## Approach
 
