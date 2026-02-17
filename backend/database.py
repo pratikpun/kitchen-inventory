@@ -1,9 +1,11 @@
 """Database connection and session configuration for PostgreSQL."""
 
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "postgresql://pratikpun@localhost:5432/kitchen_inventory"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://pratikpun@localhost:5432/kitchen_inventory")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
