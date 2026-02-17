@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: pratikpun
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: kitchen_inventory_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pratikpun -d kitchen_inventory_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://pratikpun:password@localhost:5432/kitchen_inventory_test
+        run: pytest tests/ -v

@@ -1,5 +1,7 @@
 """Integration tests for the kitchen inventory API endpoints."""
 
+import os
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -7,7 +9,9 @@ from sqlalchemy.orm import sessionmaker
 from app import app, get_db
 from database import Base
 
-TEST_DATABASE_URL = "postgresql://pratikpun@localhost:5432/kitchen_inventory_test"
+TEST_DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://pratikpun@localhost:5432/kitchen_inventory_test"
+)
 test_engine = create_engine(TEST_DATABASE_URL)
 TestSession = sessionmaker(bind=test_engine)
 
