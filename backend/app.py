@@ -4,7 +4,15 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
 from database import Base, SessionLocal, engine
-from models import Item, ItemCreate, ItemTable
+from models import (
+    Item,
+    ItemCreate,
+    ItemTable,
+    Recipe,
+    RecipeCreate,
+    RecipeIngredientTable,
+    RecipeTable,
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -71,4 +79,61 @@ def delete_item(item_id: int, db: Session = Depends(get_db)) -> None:
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     db.delete(item)
+    db.commit()
+
+
+@app.post("/recipes", status_code=201)
+def create_recipe(payload: RecipeCreate, db: Session = Depends(get_db)) -> Recipe:
+    """
+    Create a new recipe, Add the recipe without ingredients
+    then loops the ingredients to add to the database.
+    """
+    recipe = RecipeTable(**payload.model_dump(exclude={"ingredients"}))
+    db.add(recipe)
+    db.commit()
+    db.refresh(recipe)
+
+    for i in payload.ingredients:
+        recipe_ingredients = RecipeIngredientTable(
+            recipe_id=recipe.id, item_id=i.item_id, quantity=i.quantity
+        )
+        db.add(recipe_ingredients)
+    db.commit()
+
+    db.refresh(recipe)
+
+    return recipe
+
+
+@app.get("/recipes")
+def get_all_recipes(db: Session = Depends(get_db)) -> list[Recipe]:
+    """Return all items in the Recipe table."""
+    return db.query(RecipeTable).all()
+
+
+# @app.get("/recipes/available")
+# def get_available_recipes(db:Session = Depends(get_db)) -> list[Recipe]:
+#     all_recipes =  db.query(RecipeTable).all()
+#     result = []
+#     for recipe in all_recipes:
+#         for ingredients in recipe['ingredients']:
+
+
+# return all_recipes
+@app.get("/recipes/{recipe_id}")
+def get_one_recipe(recipe_id: int, db: Session = Depends(get_db)) -> Recipe:
+    """Return one item in the Recipe table."""
+    recipe = db.query(RecipeTable).filter(RecipeTable.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return recipe
+
+
+@app.delete("/recipes/{recipe_id}", status_code=204)
+def delete_recipe(recipe_id: int, db: Session = Depends(get_db)) -> None:
+    """Delete a recipe by its id. Raises 404 if not found."""
+    recipe = db.query(RecipeTable).filter(RecipeTable.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    db.delete(recipe)
     db.commit()
